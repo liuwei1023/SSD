@@ -1,3 +1,6 @@
+#if defined(_MSC_VER)
+#include <io.h>
+#endif
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/filesystem.hpp>
@@ -6,11 +9,6 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include <fcntl.h>
-
-#if defined(_MSC_VER)
-#include <io.h>
-#endif
-
 #include <google/protobuf/io/coded_stream.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include <google/protobuf/text_format.h>
@@ -64,11 +62,7 @@ void WriteProtoToTextFile(const Message& proto, const char* filename) {
 }
 
 bool ReadProtoFromBinaryFile(const char* filename, Message* proto) {
-#if defined (_MSC_VER)  // for MSC compiler binary flag needs to be specified
-  int fd = open(filename, O_RDONLY | O_BINARY);
-#else
-  int fd = open(filename, O_RDONLY);
-#endif
+	int fd = open(filename, O_RDONLY | O_BINARY);
   CHECK_NE(fd, -1) << "File not found: " << filename;
   ZeroCopyInputStream* raw_input = new FileInputStream(fd);
   CodedInputStream* coded_input = new CodedInputStream(raw_input);
@@ -172,8 +166,12 @@ bool ReadImageToDatum(const string& filename, const int label,
   if (cv_img.data) {
     if (encoding.size()) {
       if ( (cv_img.channels() == 3) == is_color && !height && !width &&
-          !min_dim && !max_dim && matchExt(filename, encoding) )
+          !min_dim && !max_dim && matchExt(filename, encoding) ) {
+        datum->set_channels(cv_img.channels());
+        datum->set_height(cv_img.rows);
+        datum->set_width(cv_img.cols);
         return ReadFileToDatum(filename, label, datum);
+      }
       EncodeCVMatToDatum(cv_img, encoding, datum);
       datum->set_label(label);
       return true;
